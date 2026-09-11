@@ -1,0 +1,17 @@
+# Central configuration for the ETL pipeline.
+# Fill in real values as each task defines them; keep secrets out of this file
+# (use a local .env instead) and out of version control.
+
+api:
+  name: ""
+  base_url: ""
+  auth_method: ""      # e.g. api_key, oauth2, none
+  rate_limit: ""        # requests per minute/hour, if documented
+
+paths:
+  raw: "data/raw"
+  interim: "data/interim"
+  processed: "data/processed"
+
+schema:
+  path: ""              # path to the schema definition once Task 3 defines it
