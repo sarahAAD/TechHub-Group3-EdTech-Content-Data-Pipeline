@@ -7,3 +7,6 @@ pyyaml
 jsonschema
 pytest
 python-dotenv
+jupyter
+nbconvert
+ipykernel
