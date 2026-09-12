@@ -1,4 +1,6 @@
 
+An end-to-end incremental ETL pipeline that discovers, extracts, profiles, validates, and transforms web article data from public Pluralsight channels into an analysis-ready dataset.
+
 | Column Name | Data Type | Nullable | Allowed Values / Constraints |
 | :--- | :--- | :--- | :--- |
 | **source** | String | No | Must be exactly 'Pluralsight' |
