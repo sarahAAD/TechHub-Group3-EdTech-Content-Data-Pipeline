@@ -1,0 +1,156 @@
+[
+  {
+    "source": "Pluralsight",
+    "category": "AI & Data",
+    "title": "10 emerging AI jobs to watch",
+    "author": "Steve Buchanan",
+    "publication_date": "Jun 15, 2026",
+    "description": "Discover ten high-paying, emerging AI jobs that help organizations build, govern, secure, and scale AI.",
+    "tags": [
+      "Upskilling",
+      "Business & Leadership",
+      "AI & Data"
+    ],
+    "url": "https://www.pluralsight.com/resources/blog/ai-and-data/10-emerging-ai-jobs",
+    "content": "",
+    "scraped_at": "2026-09-12T17:41:24.396891"
+  },
+  {
+    "source": "Pluralsight",
+    "category": "AI & Data",
+    "title": "15 AI Tools for Business Analytics",
+    "author": "Pluralsight Content Team",
+    "publication_date": "Jan 21, 2025",
+    "description": "Explore 15 powerful AI and analytics tools businesses use to boost insights, automate processes, and drive data-informed decisions.",
+    "tags": [
+      "Upskilling",
+      "AI & Data",
+      "Business & Leadership"
+    ],
+    "url": "https://www.pluralsight.com/resources/blog/ai-and-data/15-business-analytics-ai-tools",
+    "content": "",
+    "scraped_at": "2026-09-12T17:41:27.533881"
+  },
+  {
+    "source": "Pluralsight",
+    "category": "AI & Data",
+    "title": "AI career success in 2025: key learning paths and skills",
+    "author": "Axel Sirota",
+    "publication_date": "Mar 27, 2025",
+    "description": "AI is evolving fast—are your skills keeping up? Stay competitive with the most impactful AI learning paths, must-have skills, and real-world applications.",
+    "tags": [
+      "Upskilling",
+      "AI & Data"
+    ],
+    "url": "https://www.pluralsight.com/resources/blog/ai-and-data/2025-ai-career-skills",
+    "content": "",
+    "scraped_at": "2026-09-12T17:41:30.548535"
+  },
+  {
+    "source": "Pluralsight",
+    "category": "AI & Data",
+    "title": "AI tools and trends in 2025: What tech professionals should know",
+    "author": "Axel Sirota",
+    "publication_date": "Feb 13, 2025",
+    "description": "In the tech sector, here are the most important AI tools and trends to brush up on this year, whether you're a beginner or experienced practitioner.",
+    "tags": [
+      "Upskilling",
+      "AI & Data"
+    ],
+    "url": "https://www.pluralsight.com/resources/blog/ai-and-data/2025-ai-tools-trends-tech-sector",
+    "content": "",
+    "scraped_at": "2026-09-12T17:41:33.328584"
+  },
+  {
+    "source": "Pluralsight",
+    "category": "AI & Data",
+    "title": "How to train a learning model | Pluralsight",
+    "author": "Pluralsight Content Team",
+    "publication_date": "Oct 16, 2019",
+    "description": "Learn how to train your machine learning model, what the different types of algorithms are and how best to get a model that delivers on your data needs.",
+    "tags": [
+      "AI & Data"
+    ],
+    "url": "https://www.pluralsight.com/resources/blog/ai-and-data/3-steps-train-machine-learning",
+    "content": "",
+    "scraped_at": "2026-09-12T17:41:35.912718"
+  },
+  {
+    "source": "Pluralsight",
+    "category": "AI & Data",
+    "title": "Understanding AI agents for Kubernetes: Tools, use cases, and more",
+    "author": "Steve Buchanan",
+    "publication_date": "Apr 2, 2026",
+    "description": "What AI agents for Kubernetes are, what problems they aim to solve, and whether running one in your own K8s environment makes sense.",
+    "tags": [
+      "Cloud",
+      "AI & Data",
+      "Kubernetes"
+    ],
+    "url": "https://www.pluralsight.com/resources/blog/ai-and-data/AI-agents-for-kubernetes-k8s-guide",
+    "content": "",
+    "scraped_at": "2026-09-12T17:41:38.687911"
+  },
+  {
+    "source": "Pluralsight",
+    "category": "AI & Data",
+    "title": "Leaders: Don't prematurely block OpenAI from your websites",
+    "author": "Adam Ipsen",
+    "publication_date": "Apr 15, 2024",
+    "description": "You can now block the creators of ChatGPT from using your web content to train AI. However, doing so without thinking may damage your brand and influence.",
+    "tags": [
+      "AI & Data",
+      "Business & Leadership",
+      "Cybersecurity",
+      "Public sector"
+    ],
+    "url": "https://www.pluralsight.com/resources/blog/ai-and-data/Business-blocking-OpenAI-ChatGPT-crawling",
+    "content": "",
+    "scraped_at": "2026-09-12T17:41:42.122376"
+  },
+  {
+    "source": "Pluralsight",
+    "category": "AI & Data",
+    "title": "ChatGPT's Code Interpreter is now Advanced Data Analysis",
+    "author": "Adam Ipsen",
+    "publication_date": "Sep 20, 2023",
+    "description": "In the wake of OpenAI's big announcement about ChatGPT Enterprise, they also made an important feature name change that almost slipped under the radar.",
+    "tags": [
+      "Software Development",
+      "AI & Data"
+    ],
+    "url": "https://www.pluralsight.com/resources/blog/ai-and-data/ChatGPT-Advanced-Data-Analytics",
+    "content": "",
+    "scraped_at": "2026-09-12T17:41:44.757806"
+  },
+  {
+    "source": "Pluralsight",
+    "category": "AI & Data",
+    "title": "How to add GenAI to your applications with Anthropic Claude API",
+    "author": "Xavier Morera",
+    "publication_date": "May 2, 2024",
+    "description": "Get an overview of common Claude use cases and then learn how to add generative AI to your applications with the Anthropic Claude API.",
+    "tags": [
+      "Software Development",
+      "AI & Data",
+      "Anthropic"
+    ],
+    "url": "https://www.pluralsight.com/resources/blog/ai-and-data/add-genai-anthropic-claude-api",
+    "content": "",
+    "scraped_at": "2026-09-12T17:41:47.605292"
+  },
+  {
+    "source": "Pluralsight",
+    "category": "AI & Data",
+    "title": "Behind the Buzzword: What is agentic AI?",
+    "author": "Adam Ipsen",
+    "publication_date": "Aug 8, 2025",
+    "description": "Want to know what agentic AI is, but you're sick of wading through all the hype? Here's what you need to know about it with no fluff, only facts.",
+    "tags": [
+      "AI & Data"
+    ],
+    "url": "https://www.pluralsight.com/resources/blog/ai-and-data/agentic-ai-explained-btb",
+    "content": "",
+    "scraped_at": "2026-09-12T17:41:50.314135"
+  }
+]

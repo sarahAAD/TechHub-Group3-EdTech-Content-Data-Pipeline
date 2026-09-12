@@ -1,0 +1,151 @@
+[
+  {
+    "source": "Pluralsight",
+    "category": "Cloud",
+    "title": "10 cloud architecture anti-patterns to avoid",
+    "author": "Adam Ipsen",
+    "publication_date": "May 5, 2026",
+    "description": "Cloud architecture mistakes can be costly. Here’s a list of common ones to avoid, how to spot the signs, and what to do instead.",
+    "tags": [
+      "Cloud",
+      "Tech Operations"
+    ],
+    "url": "https://www.pluralsight.com/resources/blog/cloud/10-cloud-architecture-anti-patterns-avoid",
+    "content": "",
+    "scraped_at": "2026-09-12T17:45:23.381252"
+  },
+  {
+    "source": "Pluralsight",
+    "category": "Cloud",
+    "title": "10 Fun Hands-on Projects to Learn AWS",
+    "author": "Kesha Williams",
+    "publication_date": "May 27, 2024",
+    "description": "Build AWS skills with 10 hands-on projects using EC2, S3, Lambda, and more. Perfect for cloud beginners and aspiring architects.",
+    "tags": [
+      "Cloud",
+      "AWS"
+    ],
+    "url": "https://www.pluralsight.com/resources/blog/cloud/10-fun-hands-on-projects-to-learn-aws",
+    "content": "",
+    "scraped_at": "2026-09-12T17:45:26.523485"
+  },
+  {
+    "source": "Pluralsight",
+    "category": "Cloud",
+    "title": "3 AWS re:Invent predictions from AWS heroes",
+    "author": "Julie Heming",
+    "publication_date": "Nov 15, 2024",
+    "description": "From AWS sustainability initiatives to generative AI advancements, AWS Heroes share their re:Invent 2024 predictions and anticipated AWS announcements.",
+    "tags": [
+      "AWS",
+      "Cloud",
+      "AI & Data"
+    ],
+    "url": "https://www.pluralsight.com/resources/blog/cloud/3-aws-reinvent-predictions",
+    "content": "",
+    "scraped_at": "2026-09-12T17:45:29.425408"
+  },
+  {
+    "source": "Pluralsight",
+    "category": "Cloud",
+    "title": "3 ways to practice migrating workloads to the cloud",
+    "author": "Banjo Obayomi",
+    "publication_date": "Jun 08, 2023",
+    "description": "There are many ways to migrate workloads to the cloud. Here are 3 ways to get hands-on practice with rehosting, replatforming, and refactoring on AWS.",
+    "tags": [
+      "Cloud",
+      "AWS"
+    ],
+    "url": "https://www.pluralsight.com/resources/blog/cloud/3-ways-to-practice-migrating-workloads-to-the-cloud",
+    "content": "",
+    "scraped_at": "2026-09-12T17:45:32.309805"
+  },
+  {
+    "source": "Pluralsight",
+    "category": "Cloud",
+    "title": "4 steps for students to get from the classroom to a cloud career",
+    "author": "ACG Technical Editors Team",
+    "publication_date": "Jan 05, 2024",
+    "description": "The secret to starting a cloud career isn’t in any particular degree. Here are 4 ways to set yourself up for success and go from the classroom to the cloud.",
+    "tags": [
+      "Cloud",
+      "Upskilling"
+    ],
+    "url": "https://www.pluralsight.com/resources/blog/cloud/4-steps-for-students-to-get-from-the-classroom-to-a-cloud-career",
+    "content": "",
+    "scraped_at": "2026-09-12T17:45:35.797092"
+  },
+  {
+    "source": "Pluralsight",
+    "category": "Cloud",
+    "title": "4 Tips for Migrating Servers to Azure",
+    "author": "James Lee",
+    "publication_date": "Jun 08, 2023",
+    "description": "Looking to migrate servers to Azure? Here are some top considerations to ensure your migration goes off without a hitch.",
+    "tags": [
+      "Cloud",
+      "Azure"
+    ],
+    "url": "https://www.pluralsight.com/resources/blog/cloud/4-tips-for-migrating-servers-to-azure",
+    "content": "",
+    "scraped_at": "2026-09-12T17:45:38.562120"
+  },
+  {
+    "source": "Pluralsight",
+    "category": "Cloud",
+    "title": "4 ways the metaverse will change education",
+    "author": "ACG Technical Editors Team",
+    "publication_date": "Jun 08, 2023",
+    "description": "It's not just science fiction anymore! This post breaks down what the metaverse is and how can it help you on your learning journey.",
+    "tags": [
+      "Cloud"
+    ],
+    "url": "https://www.pluralsight.com/resources/blog/cloud/4-ways-the-metaverse-will-change-education",
+    "content": "",
+    "scraped_at": "2026-09-12T17:45:42.108253"
+  },
+  {
+    "source": "Pluralsight",
+    "category": "Cloud",
+    "title": "5 cloud migration recommendations from the GCP Moving Company",
+    "author": "Joseph Lowery",
+    "publication_date": "May 1, 2023",
+    "description": "No matter what you need to migrate—structured data, transformed data, VMs, VMware, or modernized workloads—there's a Google Cloud (GCP) service to help.",
+    "tags": [
+      "Cloud",
+      "Upskilling"
+    ],
+    "url": "https://www.pluralsight.com/resources/blog/cloud/5-cloud-migration-recommendations-from-the-gcp-moving-company",
+    "content": "",
+    "scraped_at": "2026-09-12T17:45:44.877178"
+  },
+  {
+    "source": "Pluralsight",
+    "category": "Cloud",
+    "title": "The 5 pillars of cloud security",
+    "author": "Pluralsight Content Team",
+    "publication_date": "Jan 13, 2023",
+    "description": "Cloud security is a shared responsibility between cloud providers and organizations. Learn how it works and how your organization can protect its deployments.",
+    "tags": [
+      "Cloud"
+    ],
+    "url": "https://www.pluralsight.com/resources/blog/cloud/5-pillars-cloud-security",
+    "content": "",
+    "scraped_at": "2026-09-12T17:45:48.242068"
+  },
+  {
+    "source": "Pluralsight",
+    "category": "Cloud",
+    "title": "5 Reasons to NOT Move to DevOps",
+    "author": "Nick Triantafillou",
+    "publication_date": "Jun 08, 2023",
+    "description": "DevOps is all the rage. But what even is it? (Does anyone know?) And why should we care? Here's why DevOps is totally overrated.",
+    "tags": [
+      "Software Development",
+      "Cloud"
+    ],
+    "url": "https://www.pluralsight.com/resources/blog/cloud/5-reasons-to-not-move-to-devops",
+    "content": "",
+    "scraped_at": "2026-09-12T17:45:51.685553"
+  }
+]
