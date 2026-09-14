@@ -103,12 +103,18 @@ def test_standardize_column_names():
 
 def test_clean_dataframe():
     df = pd.DataFrame({
-        "Source": ["  Pluralsight  ", "  Pluralsight  "],
-        "Title": ["  AI Basics  ", "Duplicate"],
-        "Author": ["  Sarah  ", "Sarah"],
-        "PublicationDate": ["September 1, 2026", "September 1, 2026"],
-        "Tags": [["AI", "Python"], ["AI", "Python"]],
-        "Url": [
+        "source": ["  Pluralsight  ", "  Pluralsight  "],
+        "title": ["  AI Basics  ", "Duplicate"],
+        "author": ["  Sarah  ", "Sarah"],
+        "publication_date": [
+            "September 1, 2026",
+            "September 1, 2026",
+        ],
+        "tags": [
+            ["AI", "Python"],
+            ["AI", "Python"],
+        ],
+        "url": [
             "https://example.com/article",
             "https://example.com/article",
         ],
@@ -119,6 +125,7 @@ def test_clean_dataframe():
     assert len(result) == 1
     assert "publication_date" in result.columns
     assert "title" in result.columns
+
     assert result.iloc[0]["source"] == "Pluralsight"
     assert result.iloc[0]["title"] == "AI Basics"
     assert result.iloc[0]["author"] == "Sarah"

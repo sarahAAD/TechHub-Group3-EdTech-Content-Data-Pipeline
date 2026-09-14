@@ -68,11 +68,10 @@ def standardize_dates(df):
     if "publication_date" in df.columns:
 
         df["publication_date"] = pd.to_datetime(
-            df["publication_date"],
-            errors="coerce"
-        ).dt.strftime(
-            "%Y-%m-%d"
-        )
+          df["publication_date"],
+          errors="coerce",
+          format="mixed"
+        ).dt.strftime("%Y-%m-%d")
 
     return df
 
