@@ -1,14 +1,15 @@
-"""Entry point for the full ETL pipeline.
-
-Placeholder only. At the integration stage this will chain together the
-functions refactored into src/ (extract -> profile/clean -> schema validate
--> join/transform) so the whole pipeline can be run end-to-end starting from
-an empty data/ folder.
-"""
+from src.profile import run_profiling
+from src.clean import run_cleaning
+from src.schema import run_schema_validation
 
 
-def main() -> None:
-    raise NotImplementedError("Pipeline will be assembled at the integration stage.")
+def main():
+    # Task 2
+    run_profiling()
+    run_cleaning()
+
+    # Task 3
+    run_schema_validation()
 
 
 if __name__ == "__main__":
