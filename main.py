@@ -1,14 +1,39 @@
-"""Entry point for the full ETL pipeline.
+"""Runs the complete dev.to ETL pipeline end to end:
 
-Placeholder only. At the integration stage this will chain together the
-functions refactored into src/ (extract -> profile/clean -> schema validate
--> join/transform) so the whole pipeline can be run end-to-end starting from
-an empty data/ folder.
+Task 1 (extract) -> Task 2 (profile + clean) -> Task 3 (schema validate) -> Task 4 (transform).
+
+Each task's logic lives in src/ (extract.py, profile.py, clean.py, schema.py, transform.py);
+this file just orchestrates them in order, same as each notebook does on its own step.
 """
 
+from src import clean, extract, profile, schema, transform
 
-def main() -> None:
-    raise NotImplementedError("Pipeline will be assembled at the integration stage.")
+
+def main():
+    print("=" * 73)
+    print("TASK 1 -- EXTRACT")
+    print("=" * 73)
+    extract.run_extraction()
+
+    print("\n" + "=" * 73)
+    print("TASK 2 -- PROFILE + CLEAN")
+    print("=" * 73)
+    raw_records, profile_summary = profile.run_profiling()
+    print(profile_summary)
+    clean.run_cleaning(raw_records)
+
+    print("\n" + "=" * 73)
+    print("TASK 3 -- SCHEMA VALIDATION")
+    print("=" * 73)
+    schema.run_schema_validation()
+
+    print("\n" + "=" * 73)
+    print("TASK 4 -- JOIN / TRANSFORM")
+    print("=" * 73)
+    final_df = transform.run_transformation()
+
+    print("\nPipeline complete.")
+    return final_df
 
 
 if __name__ == "__main__":
