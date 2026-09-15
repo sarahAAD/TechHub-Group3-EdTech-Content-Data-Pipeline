@@ -19,55 +19,20 @@ import datetime
 import threading
 import asyncio
 import sys
-
+from src.config import (
+    BASE_SEARCH_URL,
+    SEARCH_TERMS,
+    CLICKS_PER_TERM,
+    TARGET_ARTICLES_PER_TERM,
+    REQUEST_DELAY,
+    AI_KEYWORDS,
+    CLOUD_KEYWORDS,
+    DATA_KEYWORDS,
+)
 
 # ==========================================
 # SETTINGS
 # ==========================================
-
-BASE_SEARCH_URL = "https://www.freecodecamp.org/news/search/?query={}"
-
-# One broad search term per topic — trades some recall for speed,
-# versus checking all 43 keywords against every article on the full listing.
-SEARCH_TERMS = {
-    "AI": "ai",
-    "Cloud": "cloud",
-    "Data Science": "data",
-}
-
-CLICKS_PER_TERM = 10
-TARGET_ARTICLES_PER_TERM = 150
-
-
-# ==========================================
-# KEYWORDS (for enrichment only)
-# Filtering happens via the search URL itself. These lists are only used
-# afterwards to fill the matched_keywords column for extra detail.
-# ==========================================
-
-AI_KEYWORDS = [
-    "artificial intelligence", "machine learning", "deep learning",
-    "generative ai", "generative artificial intelligence",
-    "large language model", "large language models", "llm",
-    "chatgpt", "openai", "neural network", "neural networks",
-    "computer vision", "natural language processing", "nlp"
-]
-
-CLOUD_KEYWORDS = [
-    "cloud computing", "cloud", "aws", "amazon web services",
-    "azure", "microsoft azure", "google cloud",
-    "google cloud platform", "gcp", "cloud architecture",
-    "cloud services", "cloud storage"
-]
-
-DATA_KEYWORDS = [
-    "data science", "data analysis", "data analytics",
-    "data engineering", "data engineer", "data scientist",
-    "data visualization", "big data", "pandas", "numpy", "sql",
-    "data pipeline", "data pipelines", "data warehouse",
-    "data lake", "machine data"
-]
-
 
 def matches_keyword(text, keyword):
     pattern = r"(?<!\w)" + re.escape(keyword.lower()) + r"(?!\w)"
@@ -211,7 +176,7 @@ def scrape_freecodecamp(output_dir="data/raw"):
                         except Exception as e:
                             print(f"  [{topic}] Failed: {item['url']} - {e}")
 
-                        time.sleep(1)
+                        time.sleep(REQUEST_DELAY)
 
                 browser.close()
         except Exception as e:
