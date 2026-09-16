@@ -31,3 +31,6 @@ data/processed/*
 !data/raw/.gitkeep
 !data/interim/.gitkeep
 !data/processed/.gitkeep
+
+# integration output (regenerate with data/integration/combine.py) — exceeds GitHub file size limit
+data/integration/final_combined.csv
