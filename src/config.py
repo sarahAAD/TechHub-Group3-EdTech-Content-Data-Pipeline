@@ -47,7 +47,7 @@ CATEGORIES = {
 # EXTRACTION SETTINGS
 # ==============================================================================
 
-MAX_ARTICLES = 10
+MAX_ARTICLES = 300
 
 REQUEST_DELAY = 2
 
