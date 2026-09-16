@@ -8,4 +8,3 @@ jsonschema
 pytest
 python-dotenv
 beautifulsoup4
-pytest
