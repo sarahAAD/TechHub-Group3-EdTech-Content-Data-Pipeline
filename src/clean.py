@@ -1,292 +1,762 @@
+"""
+Source-specific normalization and shared cleaning.
+
+Each source has a different raw structure.
+
+This module converts all sources into:
+
+source
+category
+title
+author
+publication_date
+description
+url
+content
+tags
+"""
+
+import ast
 import re
 
 import pandas as pd
 
-from .config import (
-    CLEANED_CSV_PATH,
-)
+from .config import COMMON_COLUMNS
 
 
-# ==============================================================================
-# COLUMN NAME STANDARDIZATION
-# ==============================================================================
+# ============================================================
+# GENERAL HELPERS
+# ============================================================
 
-def to_snake_case(name):
+def safe_text(value):
     """
-    Convert column names to snake_case.
+    Convert a nullable value into clean text.
     """
 
-    s1 = re.sub(
-        "(.)([A-Z][a-z]+)",
-        r"\1_\2",
-        str(name)
-    )
+    if value is None:
+        return ""
 
-    return re.sub(
-        "([a-z0-9])([A-Z])",
-        r"\1_\2",
-        s1
-    ).lower().strip()
+    try:
+        if pd.isna(value):
+            return ""
+    except (TypeError, ValueError):
+        pass
+
+    return str(value).strip()
 
 
-# ==============================================================================
-# FLATTEN NESTED FIELDS
-# ==============================================================================
-
-def flatten_tags(df):
+def parse_tags(value):
     """
-    Convert list-based tags into comma-separated strings.
-    """
+    Convert different tag representations into a Python list.
 
-    df = df.copy()
+    Handles:
 
-    if "tags" in df.columns:
+    ["AI", "Cloud"]
 
-        df["tags"] = df["tags"].apply(
-            lambda x:
-            ", ".join(x)
-            if isinstance(x, list)
-            else str(x)
-        )
+    "['AI', 'Cloud']"
 
-    return df
-
-
-# ==============================================================================
-# STANDARDIZE PUBLICATION DATES
-# ==============================================================================
-
-def standardize_dates(df):
-    """
-    Convert publication_date to YYYY-MM-DD.
-
-    Invalid dates become NaT.
+    "AI, Cloud"
     """
 
-    df = df.copy()
+    if value is None:
+        return []
 
-    if "publication_date" in df.columns:
+    if isinstance(value, list):
+        return [
+            str(tag).strip()
+            for tag in value
+            if str(tag).strip()
+        ]
 
-        df["publication_date"] = pd.to_datetime(
-          df["publication_date"],
-          errors="coerce",
-          format="mixed"
-        ).dt.strftime("%Y-%m-%d")
+    try:
+        if pd.isna(value):
+            return []
+    except (TypeError, ValueError):
+        pass
 
-    return df
+    text = str(value).strip()
 
+    if not text:
+        return []
 
-# ==============================================================================
-# REMOVE DUPLICATES
-# ==============================================================================
+    # Try parsing a string representation of a list.
+    try:
 
-def remove_duplicates(df):
-    """
-    Remove duplicate articles using URL as
-    the unique identifier.
-    """
+        parsed = ast.literal_eval(text)
 
-    df = df.copy()
+        if isinstance(
+            parsed,
+            (list, tuple, set),
+        ):
 
-    if "url" in df.columns:
+            return [
+                str(tag).strip()
+                for tag in parsed
+                if str(tag).strip()
+            ]
 
-        df = df.drop_duplicates(
-            subset=["url"]
-        )
+    except (
+        ValueError,
+        SyntaxError,
+    ):
+        pass
 
-    return df
-
-
-# ==============================================================================
-# CLEAN STRING WHITESPACE
-# ==============================================================================
-
-def clean_string_columns(df):
-    """
-    Remove leading and trailing whitespace
-    from object/string columns.
-    """
-
-    df = df.copy()
-
-    for column in df.select_dtypes(
-        include=["object"]
-    ).columns:
-
-        if column not in [
-            "tags",
-            "publication_date"
-        ]:
-
-            df[column] = (
-                df[column]
-                .astype(str)
-                .str.strip()
-            )
-
-    return df
-
-
-# ==============================================================================
-# STANDARDIZE COLUMN NAMES
-# ==============================================================================
-
-def standardize_column_names(df):
-    """
-    Convert all column names to snake_case.
-    """
-
-    df = df.copy()
-
-    df.columns = [
-        to_snake_case(column)
-        for column in df.columns
+    # Otherwise assume comma-separated tags.
+    return [
+        tag.strip()
+        for tag in text.split(",")
+        if tag.strip()
     ]
 
-    return df
 
-
-# ==============================================================================
-# COMPLETE CLEANING PIPELINE
-# ==============================================================================
-
-def clean_dataframe(df):
+def tags_to_string(value):
     """
-    Execute all Task 2 cleaning and standardization
-    operations in the same order as the notebook.
+    Store tags consistently in CSV-friendly form.
     """
 
-    df_clean = df.copy()
-
-    # 1. Flatten nested tags
-    df_clean = flatten_tags(
-        df_clean
+    return ", ".join(
+        parse_tags(value)
     )
 
-    # 2. Standardize publication dates
-    df_clean = standardize_dates(
-        df_clean
-    )
 
-    # 3. Remove duplicate URLs
-    df_clean = remove_duplicates(
-        df_clean
-    )
-
-    # 4. Clean string whitespace
-    df_clean = clean_string_columns(
-        df_clean
-    )
-
-    # 5. Standardize column names
-    df_clean = standardize_column_names(
-        df_clean
-    )
-
-    print(
-        "Data mutation transformations finished. "
-        f"Working tracking shape is down to: "
-        f"{df_clean.shape} uniform rows."
-    )
-
-    return df_clean
-
-
-# ==============================================================================
-# SAVE CLEANED DATA
-# ==============================================================================
-
-def save_cleaned_data(df):
+def clean_text(value):
     """
-    Save the cleaned DataFrame to data/interim/cleaned.csv.
+    Perform conservative text cleanup.
+
+    We intentionally avoid aggressive removal because programming
+    articles may legitimately contain words such as code, output,
+    example, syntax, etc.
     """
 
-    df.to_csv(
-        CLEANED_CSV_PATH,
-        index=False,
-        encoding="utf-8"
+    text = safe_text(value)
+
+    text = re.sub(
+        r"[ \t]+",
+        " ",
+        text,
     )
 
-    print(
-        "File flushed smoothly into relative "
-        "environment storage destination path: "
-        f"{CLEANED_CSV_PATH}"
+    text = re.sub(
+        r"\n\s*\n+",
+        "\n",
+        text,
     )
 
+    return text.strip()
 
-# ==============================================================================
-# VERIFY OUTPUT
-# ==============================================================================
 
-def verify_cleaned_data():
+def normalize_date(value):
     """
-    Read the generated CSV again and verify
-    that it can be loaded successfully.
+    Convert valid dates/timestamps to YYYY-MM-DD.
+
+    Missing or invalid dates remain blank rather than being invented.
     """
 
-    df_verification = pd.read_csv(
-        CLEANED_CSV_PATH
+    text = safe_text(value)
+
+    if not text:
+        return ""
+
+    parsed = pd.to_datetime(
+        text,
+        errors="coerce",
+        utc=True,
     )
 
-    print(
-        "========================================================================="
+    if pd.isna(parsed):
+        return ""
+
+    return parsed.strftime(
+        "%Y-%m-%d"
     )
 
-    print(
-        "INTERIM CHECKPOINT DISK VALIDATION DETAILS"
+
+# ============================================================
+# DEV.TO
+# ============================================================
+
+def clean_devto_markdown(value):
+    """
+    Convert dev.to Markdown into cleaner plain text.
+
+    Markup is removed conservatively while retaining the
+    educational article text.
+    """
+
+    text = safe_text(value)
+
+    if not text:
+        return ""
+
+    # Liquid/embed tags
+    text = re.sub(
+        r"\{%.*?%\}",
+        "",
+        text,
+        flags=re.DOTALL,
     )
 
-    print(
-        "========================================================================="
+    # Markdown images
+    text = re.sub(
+        r"!\[[^\]]*\]\([^)]*\)",
+        "",
+        text,
     )
 
-    print(
-        f"CSV Rows Read: "
-        f"{df_verification.shape[0]}"
+    # Markdown links: retain visible text.
+    text = re.sub(
+        r"\[([^\]]+)\]\([^)]*\)",
+        r"\1",
+        text,
     )
 
-    print(
-        f"CSV Column Names: "
-        f"{list(df_verification.columns)}"
+    # Inline code: retain code text.
+    text = re.sub(
+        r"`([^`]*)`",
+        r"\1",
+        text,
     )
 
-    if not df_verification.empty:
+    # Heading markers
+    text = re.sub(
+        r"^#{1,6}\s*",
+        "",
+        text,
+        flags=re.MULTILINE,
+    )
 
-        print(
-            "\nFirst row sneak-preview "
-            "column properties:"
+    # HTML tags
+    text = re.sub(
+        r"<[^>]+>",
+        "",
+        text,
+    )
+
+    return clean_text(text)
+
+
+def normalize_devto(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+
+    records = []
+
+    for raw in df.to_dict(
+        orient="records"
+    ):
+
+        user = raw.get("user") or {}
+
+        tag_value = (
+            raw.get("tag_list")
+            or raw.get("tags")
         )
 
-        print(
-            df_verification.iloc[0].to_dict()
+        tag_list = parse_tags(
+            tag_value
         )
 
-    return df_verification
+        category = safe_text(
+            raw.get("category")
+            or raw.get("topic")
+        )
+
+        # If no explicit category exists,
+        # use the first available tag.
+        if not category and tag_list:
+            category = tag_list[0]
+
+        content = (
+            raw.get("body_markdown")
+            or raw.get("content_markdown")
+            or raw.get("content_clean")
+            or ""
+        )
+
+        records.append(
+            {
+                "source": "dev.to",
+
+                "category": category,
+
+                "title": safe_text(
+                    raw.get("title")
+                ),
+
+                "author": safe_text(
+                    user.get("name")
+                    or user.get("username")
+                    or raw.get("author")
+                ),
+
+                "publication_date":
+                    normalize_date(
+                        raw.get("published_at")
+                        or raw.get(
+                            "published_timestamp"
+                        )
+                    ),
+
+                "description":
+                    clean_text(
+                        raw.get("description")
+                    ),
+
+                "url": safe_text(
+                    raw.get("url")
+                ),
+
+                "content":
+                    clean_devto_markdown(
+                        content
+                    ),
+
+                "tags":
+                    tags_to_string(
+                        tag_list
+                    ),
+            }
+        )
+
+    return pd.DataFrame(
+        records
+    )
 
 
-# ==============================================================================
-# TASK 2 CLEANING PIPELINE
-# ==============================================================================
+# ============================================================
+# PLURALSIGHT
+# ============================================================
 
-def run_cleaning(df):
+def normalize_pluralsight(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+
+    records = []
+
+    for raw in df.to_dict(
+        orient="records"
+    ):
+
+        records.append(
+            {
+                "source": "Pluralsight",
+
+                "category": safe_text(
+                    raw.get("category")
+                ),
+
+                "title": safe_text(
+                    raw.get("title")
+                ),
+
+                "author": safe_text(
+                    raw.get("author")
+                ),
+
+                "publication_date":
+                    normalize_date(
+                        raw.get(
+                            "publication_date"
+                        )
+                    ),
+
+                "description":
+                    clean_text(
+                        raw.get("description")
+                    ),
+
+                "url": safe_text(
+                    raw.get("url")
+                ),
+
+                "content":
+                    clean_text(
+                        raw.get("content")
+                    ),
+
+                "tags":
+                    tags_to_string(
+                        raw.get("tags")
+                    ),
+            }
+        )
+
+    return pd.DataFrame(
+        records
+    )
+
+
+# ============================================================
+# FREECODECAMP
+# ============================================================
+
+def normalize_freecodecamp(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+
+    records = []
+
+    for raw in df.to_dict(
+        orient="records"
+    ):
+
+        # Dana's pipeline uses topic for the
+        # AI / Cloud / Data Science grouping.
+        category = safe_text(
+            raw.get("topic")
+            or raw.get("category")
+        )
+
+        records.append(
+            {
+                "source": "freeCodeCamp",
+
+                "category": category,
+
+                "title": safe_text(
+                    raw.get("title")
+                ),
+
+                "author": safe_text(
+                    raw.get("author")
+                ),
+
+                "publication_date":
+                    normalize_date(
+                        raw.get(
+                            "publication_date"
+                        )
+                    ),
+
+                "description":
+                    clean_text(
+                        raw.get("description")
+                    ),
+
+                "url": safe_text(
+                    raw.get("url")
+                ),
+
+                # Current freeCodeCamp extractor
+                # may not contain article body.
+                "content":
+                    clean_text(
+                        raw.get("content")
+                    ),
+
+                # Preserve the site's category/tag.
+                "tags":
+                    tags_to_string(
+                        raw.get("category")
+                    ),
+            }
+        )
+
+    return pd.DataFrame(
+        records
+    )
+
+
+# ============================================================
+# MEDIUM
+# ============================================================
+
+def normalize_medium(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+
+    records = []
+
+    for raw in df.to_dict(
+        orient="records"
+    ):
+
+        publication_date = (
+            raw.get("publication_date")
+            or raw.get("timestamp")
+        )
+
+        content = (
+            raw.get("content")
+            or raw.get("text")
+        )
+
+        author = (
+            raw.get("author")
+            or raw.get("authors")
+        )
+
+        records.append(
+            {
+                "source": "Medium",
+
+                "category": safe_text(
+                    raw.get("category")
+                ),
+
+                "title": safe_text(
+                    raw.get("title")
+                ),
+
+                "author": safe_text(
+                    author
+                ),
+
+                "publication_date":
+                    normalize_date(
+                        publication_date
+                    ),
+
+                "description":
+                    clean_text(
+                        raw.get("description")
+                    ),
+
+                "url": safe_text(
+                    raw.get("url")
+                ),
+
+                "content":
+                    clean_text(
+                        content
+                    ),
+
+                "tags":
+                    tags_to_string(
+                        raw.get("tags")
+                    ),
+            }
+        )
+
+    return pd.DataFrame(
+        records
+    )
+
+
+# ============================================================
+# GEEKSFORGEEKS
+# ============================================================
+
+def normalize_geeksforgeeks(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+
+    records = []
+
+    for raw in df.to_dict(
+        orient="records"
+    ):
+
+        records.append(
+            {
+                "source":
+                    "GeeksforGeeks",
+
+                "category":
+                    safe_text(
+                        raw.get("category")
+                    ),
+
+                "title":
+                    safe_text(
+                        raw.get("title")
+                    ),
+
+                # Original Kaggle source does
+                # not reliably provide author.
+                "author":
+                    safe_text(
+                        raw.get("author")
+                    ),
+
+                # Same for publication date.
+                "publication_date":
+                    normalize_date(
+                        raw.get(
+                            "publication_date"
+                        )
+                    ),
+
+                "description":
+                    clean_text(
+                        raw.get("description")
+                    ),
+
+                "url":
+                    safe_text(
+                        raw.get("url")
+                    ),
+
+                "content":
+                    clean_text(
+                        raw.get("content")
+                    ),
+
+                "tags":
+                    tags_to_string(
+                        raw.get("tags")
+                    ),
+            }
+        )
+
+    return pd.DataFrame(
+        records
+    )
+
+
+# ============================================================
+# NORMALIZER REGISTRY
+# ============================================================
+
+NORMALIZERS = {
+    "dev.to":
+        normalize_devto,
+
+    "Pluralsight":
+        normalize_pluralsight,
+
+    "freeCodeCamp":
+        normalize_freecodecamp,
+
+    "Medium":
+        normalize_medium,
+
+    "GeeksforGeeks":
+        normalize_geeksforgeeks,
+}
+
+
+# ============================================================
+# SHARED CLEANING
+# ============================================================
+
+def clean_source_dataframe(
+    source: str,
+    df: pd.DataFrame,
+) -> pd.DataFrame:
     """
-    Run the complete Task 2 cleaning process,
-    save the result, and verify the output.
+    Normalize and clean one source.
     """
 
-    df_clean = clean_dataframe(
+    if source not in NORMALIZERS:
+
+        raise ValueError(
+            f"Unsupported source: {source}"
+        )
+
+    cleaned = NORMALIZERS[source](
         df
+    ).copy()
+
+    # Guarantee common columns exist.
+    for column in COMMON_COLUMNS:
+
+        if column not in cleaned.columns:
+            cleaned[column] = ""
+
+    cleaned = cleaned[
+        COMMON_COLUMNS
+    ]
+
+    # Standardize text/null handling.
+    for column in COMMON_COLUMNS:
+
+        cleaned[column] = (
+            cleaned[column]
+            .fillna("")
+            .astype(str)
+            .str.strip()
+        )
+
+    # A record without title or URL is not
+    # useful for this content dataset.
+    cleaned = cleaned[
+        cleaned["title"].ne("")
+        & cleaned["url"].ne("")
+    ].copy()
+
+    # Remove repeated articles from a source.
+    cleaned = (
+        cleaned
+        .drop_duplicates(
+            subset=["url"],
+            keep="first",
+        )
+        .reset_index(drop=True)
     )
 
-    save_cleaned_data(
-        df_clean
+    return cleaned
+
+
+# ============================================================
+# CROSS-SOURCE COMBINATION
+# ============================================================
+
+def combine_cleaned_sources(
+    source_frames,
+) -> pd.DataFrame:
+    """
+    Normalize every source and vertically concatenate them.
+
+    This is a UNION/CONCAT operation rather than a relational join,
+    because unrelated articles do not share a meaningful join key.
+    """
+
+    cleaned_frames = []
+
+    for source, df in source_frames.items():
+
+        print(
+            f"Cleaning {source}..."
+        )
+
+        cleaned = (
+            clean_source_dataframe(
+                source,
+                df,
+            )
+        )
+
+        print(
+            f"{source}: "
+            f"{len(cleaned)} cleaned records"
+        )
+
+        cleaned_frames.append(
+            cleaned
+        )
+
+    if not cleaned_frames:
+
+        return pd.DataFrame(
+            columns=COMMON_COLUMNS
+        )
+
+    combined = pd.concat(
+        cleaned_frames,
+        ignore_index=True,
+        sort=False,
     )
 
-    df_verification = (
-        verify_cleaned_data()
+    before = len(combined)
+
+    # Cross-source duplicate protection.
+    combined = (
+        combined
+        .drop_duplicates(
+            subset=["url"],
+            keep="first",
+        )
+        .reset_index(drop=True)
     )
 
-    return (
-        df_clean,
-        df_verification
+    removed = (
+        before - len(combined)
     )
+
+    print(
+        f"Cross-source duplicates removed: "
+        f"{removed}"
+    )
+
+    return combined

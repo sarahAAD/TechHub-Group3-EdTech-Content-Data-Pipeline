@@ -1,52 +1,52 @@
+"""
+Shared transformations for the validated EdTech dataset.
+
+These transformations are intentionally source-independent so
+that they can be applied consistently across all five sources.
+"""
+
 import pandas as pd
 
 from .config import (
-    VALIDATED_CSV_PATH,
-    FINAL_CSV_PATH,
+    COMMON_COLUMNS,
+    LONG_FORM_WORD_THRESHOLD,
 )
 
 
-# ==============================================================================
-# LOAD VALIDATED DATA
-# ==============================================================================
+# ============================================================
+# AUTHOR
+# ============================================================
 
-def load_validated_data():
+def fill_missing_author(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
     """
-    Load the validated dataset produced by Task 3.
+    Convert missing authors to 'Unknown' after validation.
+
+    We do this during transformation rather than ingestion so
+    the raw missingness remains visible during profiling.
     """
 
-    if not VALIDATED_CSV_PATH.exists():
-        raise FileNotFoundError(
-            f"Missing validated dataset: "
-            f"{VALIDATED_CSV_PATH}"
-        )
+    df = df.copy()
 
-    df = pd.read_csv(
-        VALIDATED_CSV_PATH
-    )
-
-    print(
-        f"Loaded validated dataset. "
-        f"Shape: {df.shape}"
+    df["author"] = (
+        df["author"]
+        .replace("", pd.NA)
+        .fillna("Unknown")
     )
 
     return df
 
 
-# ==============================================================================
-# R1 - WORD COUNT
-# ==============================================================================
+# ============================================================
+# WORD COUNT
+# ============================================================
 
-def add_word_count(df):
+def add_word_count(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
     """
-    R1:
-    Calculate the number of words in article content.
-
-    Input:
-        content
-
-    Output:
-        word_count
+    Count words in article content.
     """
 
     df = df.copy()
@@ -62,128 +62,121 @@ def add_word_count(df):
     return df
 
 
-# ==============================================================================
-# R2 - MISSING AUTHOR
-# ==============================================================================
+# ============================================================
+# PUBLICATION YEAR
+# ============================================================
 
-def fill_missing_author(df):
+def add_publish_year(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
     """
-    R2:
-    Replace missing or empty author values with
-    'Unknown'.
-
-    Input:
-        author
-
-    Output:
-        author
+    Extract publication year when a date is available.
     """
 
     df = df.copy()
 
-    df["author"] = (
-        df["author"]
-        .replace("", pd.NA)
-        .fillna("Unknown")
+    df["publish_year"] = (
+        pd.to_datetime(
+            df["publication_date"],
+            errors="coerce",
+        )
+        .dt.year
     )
 
     return df
 
 
-# ==============================================================================
-# R3 - LONG FORM FLAG
-# ==============================================================================
+# ============================================================
+# LONG-FORM FLAG
+# ============================================================
 
-def add_long_form_flag(df):
+def add_long_form_flag(
+    df: pd.DataFrame,
+    threshold=LONG_FORM_WORD_THRESHOLD,
+) -> pd.DataFrame:
     """
-    R3:
-    Identify articles containing more than 500 words.
-
-    Input:
-        word_count
-
-    Output:
-        is_long_form
+    Flag articles containing more than the configured
+    number of words.
     """
 
     df = df.copy()
 
     df["is_long_form"] = (
-        df["word_count"] > 500
+        df["word_count"]
+        > threshold
     )
 
     return df
 
 
-# ==============================================================================
-# COMPLETE TRANSFORMATION PIPELINE
-# ==============================================================================
+# ============================================================
+# COMPLETE TRANSFORMATION
+# ============================================================
 
-def transform_dataframe(df):
+def transform_dataframe(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
     """
-    Apply all Task 4 transformation rules.
-    """
-
-    df_transformed = df.copy()
-
-    df_transformed = add_word_count(
-        df_transformed
-    )
-
-    df_transformed = fill_missing_author(
-        df_transformed
-    )
-
-    df_transformed = add_long_form_flag(
-        df_transformed
-    )
-
-    return df_transformed
-
-
-# ==============================================================================
-# SAVE FINAL DATA
-# ==============================================================================
-
-def save_final_data(df):
-    """
-    Save the final analysis-ready dataset.
+    Apply all shared transformation rules.
     """
 
-    df.to_csv(
-        FINAL_CSV_PATH,
-        index=False,
-        encoding="utf-8"
+    transformed = df.copy()
+
+    transformed = (
+        fill_missing_author(
+            transformed
+        )
     )
 
-    print(
-        f"Final dataset saved to: "
-        f"{FINAL_CSV_PATH}"
+    transformed = (
+        add_word_count(
+            transformed
+        )
     )
 
+    transformed = (
+        add_publish_year(
+            transformed
+        )
+    )
 
-# ==============================================================================
-# TASK 4 PIPELINE
-# ==============================================================================
+    transformed = (
+        add_long_form_flag(
+            transformed
+        )
+    )
 
-def run_transformation():
+    return transformed
+
+
+# ============================================================
+# FINAL COLUMN ORDER
+# ============================================================
+
+def select_final_columns(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
     """
-    Run the complete Task 4 transformation process.
+    Produce the final analysis-ready column order.
     """
 
-    df_validated = load_validated_data()
+    derived_columns = [
+        "word_count",
+        "publish_year",
+        "is_long_form",
+    ]
 
-    df_final = transform_dataframe(
-        df_validated
+    final_columns = (
+        COMMON_COLUMNS
+        + derived_columns
     )
 
-    save_final_data(
-        df_final
-    )
+    available_columns = [
+        column
+        for column in final_columns
+        if column in df.columns
+    ]
 
-    print(
-        f"Final dataset shape: "
-        f"{df_final.shape}"
-    )
-
-    return df_final
+    return df[
+        available_columns
+    ].copy()

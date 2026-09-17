@@ -1,133 +1,447 @@
 import pandas as pd
 
 from src.clean import (
-    to_snake_case,
-    flatten_tags,
-    standardize_dates,
-    remove_duplicates,
-    clean_string_columns,
-    standardize_column_names,
-    clean_dataframe,
+    combine_cleaned_sources,
+    normalize_devto,
+    normalize_freecodecamp,
+    normalize_geeksforgeeks,
+    normalize_medium,
+    normalize_pluralsight,
+    parse_tags,
 )
 
 
-def test_to_snake_case():
-    assert to_snake_case("PublicationDate") == "publication_date"
-    assert to_snake_case("ArticleTitle") == "article_title"
-    assert to_snake_case("url") == "url"
+# ============================================================
+# TAG PARSING
+# ============================================================
 
+def test_parse_tags_list():
 
-def test_flatten_tags():
-    df = pd.DataFrame({
-        "tags": [
-            ["AI", "Python"],
-            ["Cloud"],
-            "",
-        ]
-    })
+    result = parse_tags(
+        ["AI", "Cloud"]
+    )
 
-    result = flatten_tags(df)
-
-    assert result.loc[0, "tags"] == "AI, Python"
-    assert result.loc[1, "tags"] == "Cloud"
-    assert result.loc[2, "tags"] == ""
-
-
-def test_standardize_dates():
-    df = pd.DataFrame({
-        "publication_date": [
-            "2026-09-14",
-            "September 1, 2026",
-            "invalid-date",
-        ]
-    })
-
-    result = standardize_dates(df)
-
-    assert result.loc[0, "publication_date"] == "2026-09-14"
-    assert result.loc[1, "publication_date"] == "2026-09-01"
-    assert pd.isna(result.loc[2, "publication_date"])
-
-
-def test_remove_duplicates():
-    df = pd.DataFrame({
-        "url": [
-            "https://example.com/a",
-            "https://example.com/a",
-            "https://example.com/b",
-        ],
-        "title": [
-            "First",
-            "Duplicate",
-            "Second",
-        ],
-    })
-
-    result = remove_duplicates(df)
-
-    assert len(result) == 2
-    assert result["url"].nunique() == 2
-
-
-def test_clean_string_columns():
-    df = pd.DataFrame({
-        "title": ["  AI Article  "],
-        "author": ["  Sarah  "],
-        "tags": [" AI, Python "],
-        "publication_date": ["2026-09-14"],
-    })
-
-    result = clean_string_columns(df)
-
-    assert result.loc[0, "title"] == "AI Article"
-    assert result.loc[0, "author"] == "Sarah"
-
-    # These two columns are intentionally excluded by clean_string_columns().
-    assert result.loc[0, "tags"] == " AI, Python "
-    assert result.loc[0, "publication_date"] == "2026-09-14"
-
-
-def test_standardize_column_names():
-    df = pd.DataFrame({
-        "PublicationDate": ["2026-09-14"],
-        "ArticleTitle": ["Example"],
-    })
-
-    result = standardize_column_names(df)
-
-    assert list(result.columns) == [
-        "publication_date",
-        "article_title",
+    assert result == [
+        "AI",
+        "Cloud",
     ]
 
 
-def test_clean_dataframe():
-    df = pd.DataFrame({
-        "source": ["  Pluralsight  ", "  Pluralsight  "],
-        "title": ["  AI Basics  ", "Duplicate"],
-        "author": ["  Sarah  ", "Sarah"],
-        "publication_date": [
-            "September 1, 2026",
-            "September 1, 2026",
-        ],
-        "tags": [
-            ["AI", "Python"],
-            ["AI", "Python"],
-        ],
-        "url": [
-            "https://example.com/article",
-            "https://example.com/article",
-        ],
-    })
+def test_parse_tags_string_list():
 
-    result = clean_dataframe(df)
+    result = parse_tags(
+        "['AI', 'Cloud']"
+    )
 
-    assert len(result) == 1
-    assert "publication_date" in result.columns
-    assert "title" in result.columns
+    assert result == [
+        "AI",
+        "Cloud",
+    ]
 
-    assert result.iloc[0]["source"] == "Pluralsight"
-    assert result.iloc[0]["title"] == "AI Basics"
-    assert result.iloc[0]["author"] == "Sarah"
-    assert result.iloc[0]["publication_date"] == "2026-09-01"
-    assert result.iloc[0]["tags"] == "AI, Python"
+
+def test_parse_tags_comma_string():
+
+    result = parse_tags(
+        "AI, Cloud"
+    )
+
+    assert result == [
+        "AI",
+        "Cloud",
+    ]
+
+
+# ============================================================
+# DEV.TO
+# ============================================================
+
+def test_normalize_devto():
+
+    df = pd.DataFrame(
+        [
+            {
+                "title":
+                    "Introduction to AI",
+
+                "url":
+                    "https://dev.to/example",
+
+                "published_at":
+                    "2026-01-01T12:00:00Z",
+
+                "description":
+                    "AI tutorial",
+
+                "tag_list":
+                    ["ai", "python"],
+
+                "body_markdown":
+                    "# Hello\nThis is AI.",
+
+                "user":
+                    {
+                        "name": "Author"
+                    },
+            }
+        ]
+    )
+
+    result = normalize_devto(
+        df
+    )
+
+    row = result.iloc[0]
+
+    assert (
+        row["source"]
+        == "dev.to"
+    )
+
+    assert (
+        row["title"]
+        == "Introduction to AI"
+    )
+
+    assert (
+        row["author"]
+        == "Author"
+    )
+
+    assert (
+        row["publication_date"]
+        == "2026-01-01"
+    )
+
+    assert (
+        "Hello"
+        in row["content"]
+    )
+
+    assert (
+        row["tags"]
+        == "ai, python"
+    )
+
+
+# ============================================================
+# PLURALSIGHT
+# ============================================================
+
+def test_normalize_pluralsight():
+
+    df = pd.DataFrame(
+        [
+            {
+                "category":
+                    "Cloud",
+
+                "title":
+                    "AWS Tutorial",
+
+                "author":
+                    "Sarah",
+
+                "publication_date":
+                    "2026-02-10",
+
+                "description":
+                    "Learn AWS",
+
+                "url":
+                    "https://pluralsight.com/example",
+
+                "content":
+                    "AWS cloud content",
+
+                "tags":
+                    ["AWS", "Cloud"],
+            }
+        ]
+    )
+
+    result = (
+        normalize_pluralsight(
+            df
+        )
+    )
+
+    row = result.iloc[0]
+
+    assert (
+        row["source"]
+        == "Pluralsight"
+    )
+
+    assert (
+        row["category"]
+        == "Cloud"
+    )
+
+    assert (
+        row["content"]
+        == "AWS cloud content"
+    )
+
+    assert (
+        row["tags"]
+        == "AWS, Cloud"
+    )
+
+
+# ============================================================
+# FREECODECAMP
+# ============================================================
+
+def test_normalize_freecodecamp():
+
+    df = pd.DataFrame(
+        [
+            {
+                "topic":
+                    "AI",
+
+                "category":
+                    "Python",
+
+                "title":
+                    "Python AI Tutorial",
+
+                "author":
+                    "Example Author",
+
+                "publication_date":
+                    "2026-03-01",
+
+                "description":
+                    "Learn AI",
+
+                "url":
+                    "https://freecodecamp.org/example",
+            }
+        ]
+    )
+
+    result = (
+        normalize_freecodecamp(
+            df
+        )
+    )
+
+    row = result.iloc[0]
+
+    assert (
+        row["source"]
+        == "freeCodeCamp"
+    )
+
+    assert (
+        row["category"]
+        == "AI"
+    )
+
+    assert (
+        row["tags"]
+        == "Python"
+    )
+
+    # Current scraper may not
+    # contain full article content.
+    assert (
+        row["content"]
+        == ""
+    )
+
+
+# ============================================================
+# MEDIUM
+# ============================================================
+
+def test_normalize_medium():
+
+    df = pd.DataFrame(
+        [
+            {
+                "title":
+                    "Machine Learning",
+
+                "authors":
+                    "Jane Doe",
+
+                "timestamp":
+                    "2026-04-01T10:00:00Z",
+
+                "url":
+                    "https://medium.com/example",
+
+                "text":
+                    "Machine learning article",
+
+                "tags":
+                    ["machine-learning", "ai"],
+
+                "category":
+                    "AI",
+            }
+        ]
+    )
+
+    result = normalize_medium(
+        df
+    )
+
+    row = result.iloc[0]
+
+    assert (
+        row["source"]
+        == "Medium"
+    )
+
+    assert (
+        row["author"]
+        == "Jane Doe"
+    )
+
+    assert (
+        row["publication_date"]
+        == "2026-04-01"
+    )
+
+    assert (
+        row["content"]
+        == "Machine learning article"
+    )
+
+    assert (
+        row["tags"]
+        == "machine-learning, ai"
+    )
+
+
+# ============================================================
+# GEEKSFORGEEKS
+# ============================================================
+
+def test_normalize_geeksforgeeks():
+
+    df = pd.DataFrame(
+        [
+            {
+                "title":
+                    "Pandas Tutorial",
+
+                "url":
+                    "https://geeksforgeeks.org/example",
+
+                "content":
+                    "Pandas dataframe tutorial",
+
+                "tags":
+                    "['Pandas', 'Python']",
+
+                "category":
+                    "Data",
+            }
+        ]
+    )
+
+    result = (
+        normalize_geeksforgeeks(
+            df
+        )
+    )
+
+    row = result.iloc[0]
+
+    assert (
+        row["source"]
+        == "GeeksforGeeks"
+    )
+
+    assert (
+        row["category"]
+        == "Data"
+    )
+
+    assert (
+        row["content"]
+        == "Pandas dataframe tutorial"
+    )
+
+    assert (
+        row["tags"]
+        == "Pandas, Python"
+    )
+
+    # The original dataset may
+    # legitimately not contain author.
+    assert (
+        row["author"]
+        == ""
+    )
+
+
+# ============================================================
+# CROSS-SOURCE COMBINATION
+# ============================================================
+
+def test_cross_source_duplicate_urls():
+
+    gfg = pd.DataFrame(
+        [
+            {
+                "title":
+                    "Article A",
+
+                "url":
+                    "https://example.com/article",
+
+                "content":
+                    "GFG content",
+
+                "tags":
+                    "Python",
+
+                "category":
+                    "Data",
+            }
+        ]
+    )
+
+    medium = pd.DataFrame(
+        [
+            {
+                "title":
+                    "Article B",
+
+                "url":
+                    "https://example.com/article",
+
+                "text":
+                    "Medium content",
+
+                "tags":
+                    ["AI"],
+
+                "category":
+                    "AI",
+
+                "authors":
+                    "Author",
+            }
+        ]
+    )
+
+    combined = (
+        combine_cleaned_sources(
+            {
+                "GeeksforGeeks":
+                    gfg,
+
+                "Medium":
+                    medium,
+            }
+        )
+    )
+
+    # Same URL should appear once.
+    assert len(combined) == 1

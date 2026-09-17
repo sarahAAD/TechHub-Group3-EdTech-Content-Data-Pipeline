@@ -1,108 +1,128 @@
-import json
+"""
+Reusable data profiling utilities.
+
+These functions work with any of the five source datasets.
+"""
+
 import pandas as pd
 
-from .config import CATEGORIES
 
+# ============================================================
+# COLUMN PROFILING
+# ============================================================
 
-def load_json_file(path):
-    if path.exists():
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
+def profile_dataframe(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Produce basic profiling statistics for every column.
 
-    print(f"Warning: Could not find existing file at {path}")
-    return []
+    Metrics:
+    - data type
+    - null count
+    - null percentage
+    - unique count
+    - example value
+    """
 
-
-def load_raw_data():
-    all_records = []
-
-    for category_config in CATEGORIES.values():
-        records = load_json_file(category_config["output"])
-        all_records.extend(records)
-
-    return pd.DataFrame(all_records)
-
-
-def profile_dataframe(df):
     profiling_metrics = []
 
     for column in df.columns:
-        col_data = df[column]
 
-        null_count = int(col_data.isnull().sum())
+        series = df[column]
 
-        percent_null = (
-            (null_count / len(df)) * 100
-            if len(df) > 0
-            else 0
+        null_count = int(
+            series.isna().sum()
         )
 
-        hashable_series = col_data.apply(
-            lambda x: str(x) if isinstance(x, list) else x
+        if len(df) > 0:
+            percent_null = (
+                null_count / len(df)
+            ) * 100
+        else:
+            percent_null = 0.0
+
+        # Lists/dicts cannot always be counted directly.
+        hashable_series = series.apply(
+            lambda value:
+                str(value)
+                if isinstance(value, (list, dict))
+                else value
         )
 
-        unique_count = int(hashable_series.nunique())
-
-        non_null = col_data.dropna()
-
-        sample_val = (
-            non_null.iloc[0]
-            if len(non_null) > 0
-            else "N/A"
+        unique_count = int(
+            hashable_series.nunique(
+                dropna=True
+            )
         )
+
+        non_null = series.dropna()
+
+        if len(non_null) > 0:
+            sample_value = str(
+                non_null.iloc[0]
+            )[:100]
+        else:
+            sample_value = "N/A"
 
         profiling_metrics.append(
             {
                 "column_name": column,
-                "data_type": str(col_data.dtype),
+                "data_type": str(series.dtype),
                 "null_count": null_count,
-                "percent_null_ratio": f"{percent_null:.2f}%",
+                "percent_null": round(
+                    percent_null,
+                    2,
+                ),
                 "unique_count": unique_count,
-                "sample_value_preview": str(sample_val)[:50],
+                "sample_value": sample_value,
             }
         )
 
-    return pd.DataFrame(profiling_metrics)
-
-
-def identify_quality_issues(df):
-    issues = {}
-
-    issues["duplicate_urls"] = (
-        int(df.duplicated(subset=["url"]).sum())
-        if "url" in df.columns
-        else 0
+    return pd.DataFrame(
+        profiling_metrics
     )
 
-    issues["blank_authors"] = (
-        int(
-            (
-                df["author"]
+
+# ============================================================
+# QUALITY CHECKS
+# ============================================================
+
+def identify_quality_issues(
+    df: pd.DataFrame,
+) -> dict:
+    """
+    Identify common quality problems without modifying the data.
+    """
+
+    issues = {}
+
+    if "url" in df.columns:
+        issues["duplicate_urls"] = int(
+            df["url"]
+            .duplicated()
+            .sum()
+        )
+
+    for column in [
+        "title",
+        "author",
+        "content",
+    ]:
+
+        if column in df.columns:
+
+            blank_count = (
+                df[column]
                 .fillna("")
                 .astype(str)
                 .str.strip()
-                == ""
-            ).sum()
-        )
-        if "author" in df.columns
-        else 0
-    )
+                .eq("")
+                .sum()
+            )
 
-    issues["nested_tags"] = (
-        df["tags"].apply(
-            lambda x: isinstance(x, list)
-        ).any()
-        if "tags" in df.columns
-        else False
-    )
+            issues[
+                f"blank_{column}"
+            ] = int(blank_count)
 
     return issues
-
-
-def run_profiling():
-    df = load_raw_data()
-
-    profile = profile_dataframe(df)
-    issues = identify_quality_issues(df)
-
-    return df, profile, issues
