@@ -19,9 +19,11 @@ from __future__ import annotations
 import ast
 import csv
 import datetime
+import hashlib
 import json
 import os
 import re
+import signal
 import time
 from pathlib import Path
 from urllib.parse import (
@@ -66,6 +68,11 @@ from .config import (
     RAW_DIR,
     RAW_PATTERNS,
     SUPPORTED_SOURCES,
+)
+
+from .upload import (
+    load_known_urls_from_adls,
+    save_known_urls_to_adls,
 )
 
 
@@ -186,6 +193,53 @@ def save_json(
             ensure_ascii=False,
             indent=2,
         )
+
+
+def compute_content_hash(text):
+    """
+    هاش md5 بسيط للمحتوى. مو للأمان - بس عشان نقارن بسرعة هل
+    نفس الرابط تغيّر محتواه بين batch وبعده.
+    """
+
+    return hashlib.md5(
+        (text or "").encode("utf-8")
+    ).hexdigest()
+
+
+def build_seen_map(
+    records,
+    url_key="url",
+    content_fn=None,
+):
+    """
+    يبني dict {url: signature} من قائمة records جاهزة، عشان نحفظه
+    كـ"قائمة روابط معروفة" لهالمصدر بعد كل batch ناجح (راجع
+    upload.save_known_urls_to_adls).
+
+    لو content_fn معطى: نخزن هاش المحتوى (نقدر نكتشف "تغيّر"
+    حقيقي فيما بعد، مو بس "جديد").
+    لو مو معطى: نخزن بس "seen" (يكفي لتفادي إعادة الجلب لمصادر
+    جلب المحتوى فيها مكلف، بس ما يكتشف تعديل بمقالة سبق شفناها).
+    """
+
+    seen = {}
+
+    for record in records:
+
+        url = record.get(url_key)
+
+        if not url:
+            continue
+
+        seen[url] = (
+            compute_content_hash(
+                content_fn(record)
+            )
+            if content_fn
+            else "seen"
+        )
+
+    return seen
 
 
 # ============================================================
@@ -408,6 +462,35 @@ def extract_devto(
         f"{len(articles)}"
     )
 
+    # فلترة الجديد/المتغيّر بالـ URL: قبل ما نجيب تفاصيل أي مقالة
+    # (اللي هي الجزء المكلف - طلب شبكة إضافي لكل مقالة)، نتجاهل
+    # أي رابط سبق استخرجناه بـ batch سابق.
+    known_urls = (
+        {}
+        if refresh
+        else load_known_urls_from_adls(
+            "dev.to"
+        )
+    )
+
+    if known_urls:
+
+        before_count = len(articles)
+
+        articles = [
+            article
+            for article in articles
+            if article.get("url")
+            not in known_urls
+        ]
+
+        print(
+            f"dev.to: {before_count - len(articles)} "
+            "مقالة معروفة من batch سابق، "
+            "بنتخطى جلب تفاصيلها. "
+            f"الجديد: {len(articles)}"
+        )
+
     for index, article in enumerate(
         articles,
         start=1,
@@ -474,6 +557,14 @@ def extract_devto(
     print(
         f"\ndev.to saved: "
         f"{output}"
+    )
+
+    save_known_urls_to_adls(
+        "dev.to",
+        build_seen_map(
+            articles,
+            url_key="url",
+        ),
     )
 
     return output
@@ -874,6 +965,16 @@ def extract_pluralsight(
     refresh=False,
 ):
 
+    known_urls = (
+        {}
+        if refresh
+        else load_known_urls_from_adls(
+            "Pluralsight"
+        )
+    )
+
+    seen_this_run = {}
+
     outputs = []
 
     for (
@@ -913,6 +1014,29 @@ def extract_pluralsight(
                 ],
             )
         )
+
+        # فلترة الجديد/المتغيّر بالـ URL: قبل ما نجيب صفحة أي
+        # مقالة كاملة (الجزء المكلف)، نتجاهل أي رابط سبق
+        # استخرجناه بـ batch سابق.
+        if known_urls:
+
+            before_count = len(
+                article_urls
+            )
+
+            article_urls = [
+                url
+                for url in article_urls
+                if url not in known_urls
+            ]
+
+            print(
+                f"Pluralsight {category_name}: "
+                f"{before_count - len(article_urls)} "
+                "رابط معروف من batch سابق، "
+                "بنتخطاه. الجديد: "
+                f"{len(article_urls)}"
+            )
 
         results = []
 
@@ -962,6 +1086,18 @@ def extract_pluralsight(
             f"{len(results)} saved"
         )
 
+        seen_this_run.update(
+            build_seen_map(
+                results,
+                url_key="url",
+            )
+        )
+
+    save_known_urls_to_adls(
+        "Pluralsight",
+        seen_this_run,
+    )
+
     return outputs
 
 
@@ -1009,11 +1145,24 @@ def extract_freecodecamp(
 
     seen_urls = set()
 
+    known_urls = (
+        {}
+        if refresh
+        else load_known_urls_from_adls(
+            "freeCodeCamp"
+        )
+    )
+
+    skipped_known = 0
+
     with sync_playwright() as p:
 
         browser = (
             p.chromium.launch(
-                headless=True
+                headless=True,
+                args=[
+                    "--disable-dev-shm-usage",
+                ],
             )
         )
 
@@ -1115,6 +1264,16 @@ def extract_freecodecamp(
                     continue
 
                 seen_urls.add(url)
+
+                # فلترة الجديد/المتغيّر بالـ URL: قبل ما نفتح صفحة
+                # المقالة كاملة (page.goto - الجزء المكلف)، نتجاهل
+                # أي رابط سبق استخرجناه بـ batch سابق.
+                if (
+                    known_urls
+                    and url in known_urls
+                ):
+                    skipped_known += 1
+                    continue
 
                 author_tag = card.find(
                     "a",
@@ -1325,6 +1484,14 @@ def extract_freecodecamp(
 
         browser.close()
 
+    if skipped_known:
+
+        print(
+            f"freeCodeCamp: {skipped_known} "
+            "مقالة معروفة من batch سابق، "
+            "اتخطينا فتح صفحتها كاملة."
+        )
+
     today = (
         datetime.date.today()
         .isoformat()
@@ -1371,6 +1538,14 @@ def extract_freecodecamp(
     print(
         "freeCodeCamp saved: "
         f"{output}"
+    )
+
+    save_known_urls_to_adls(
+        "freeCodeCamp",
+        build_seen_map(
+            results,
+            url_key="url",
+        ),
     )
 
     return output
@@ -1456,13 +1631,32 @@ def extract_medium(
         split="train",
     )
 
-    df = dataset.to_pandas()
+    # ملاحظة: كنا نستخدم dataset.to_pandas() ثم
+    # df.to_dict(orient="records") قبل هذا السطر، وهذا كان
+    # يسوي نسختين كاملتين إضافيتين لكل بيانات Medium (اللي
+    # فيها نص المقالات كاملة لـ 171 ألف صف) بالذاكرة، وهذا
+    # هو السبب الحقيقي وراء انقطاع الحاوية بـ OOM (exit code
+    # 137). التكرار المباشر على dataset يرجع كل صف كـ dict
+    # مباشرة من صيغة Arrow الموفرة للذاكرة، بدون أي نسخ
+    # إضافية لكل البيانات.
+
+    # فلترة الجديد/المتغيّر بالـ URL: هنا المحتوى يجي مجاني مع
+    # تكرار الـ dataset (مافيه طلب شبكة إضافي لكل مقالة زي
+    # dev.to/Pluralsight/freeCodeCamp)، فنقدر نسوي مقارنة حقيقية
+    # بهاش المحتوى ونكتشف "تغيّر" فعلي، مو بس "جديد".
+    known_urls = (
+        {}
+        if refresh
+        else load_known_urls_from_adls(
+            "Medium"
+        )
+    )
+
+    skipped_unchanged = 0
 
     records = []
 
-    for raw in df.to_dict(
-        orient="records"
-    ):
+    for raw in dataset:
 
         title = str(
             raw.get("title")
@@ -1492,6 +1686,19 @@ def extract_medium(
         if not category:
             continue
 
+        url = raw.get("url")
+        content = raw.get("text")
+
+        if (
+            known_urls
+            and known_urls.get(url)
+            == compute_content_hash(
+                content
+            )
+        ):
+            skipped_unchanged += 1
+            continue
+
         records.append(
             {
                 "source":
@@ -1517,10 +1724,10 @@ def extract_medium(
                     "",
 
                 "url":
-                    raw.get("url"),
+                    url,
 
                 "content":
-                    raw.get("text"),
+                    content,
 
                 "tags":
                     tags,
@@ -1534,7 +1741,21 @@ def extract_medium(
 
     print(
         f"Medium saved: "
-        f"{len(records)} records"
+        f"{len(records)} records "
+        "(جديد/متغيّر). تخطينا "
+        f"{skipped_unchanged} مقالة "
+        "معروفة وما تغيرت."
+    )
+
+    save_known_urls_to_adls(
+        "Medium",
+        build_seen_map(
+            records,
+            url_key="url",
+            content_fn=lambda record: (
+                record.get("content")
+            ),
+        ),
     )
 
     return MEDIUM_OUTPUT
@@ -1640,6 +1861,18 @@ def extract_geeksforgeeks(
         dataset_path
     )
 
+    # فلترة الجديد/المتغيّر بالـ URL: نفس منطق Medium، المحتوى
+    # جاي مجاني مع الـ dataset فنقدر نقارن بهاش المحتوى.
+    known_urls = (
+        {}
+        if refresh
+        else load_known_urls_from_adls(
+            "GeeksforGeeks"
+        )
+    )
+
+    skipped_unchanged = 0
+
     records = []
 
     for raw in df.to_dict(
@@ -1677,6 +1910,19 @@ def extract_geeksforgeeks(
         if not category:
             continue
 
+        url = raw.get("url")
+        content = raw.get("content")
+
+        if (
+            known_urls
+            and known_urls.get(url)
+            == compute_content_hash(
+                content
+            )
+        ):
+            skipped_unchanged += 1
+            continue
+
         records.append(
             {
                 "source":
@@ -1698,12 +1944,10 @@ def extract_geeksforgeeks(
                     "",
 
                 "url":
-                    raw.get("url"),
+                    url,
 
                 "content":
-                    raw.get(
-                        "content"
-                    ),
+                    content,
 
                 "tags":
                     tags,
@@ -1717,7 +1961,21 @@ def extract_geeksforgeeks(
 
     print(
         "GeeksforGeeks saved: "
-        f"{len(records)} records"
+        f"{len(records)} records "
+        "(جديد/متغيّر). تخطينا "
+        f"{skipped_unchanged} مقالة "
+        "معروفة وما تغيرت."
+    )
+
+    save_known_urls_to_adls(
+        "GeeksforGeeks",
+        build_seen_map(
+            records,
+            url_key="url",
+            content_fn=lambda record: (
+                record.get("content")
+            ),
+        ),
     )
 
     return GFG_OUTPUT
@@ -1879,23 +2137,68 @@ EXTRACTORS = {
 }
 
 
+class ExtractionTimeout(Exception):
+    """Raised when a single source exceeds its time budget."""
+
+
+def _timeout_handler(signum, frame):
+    raise ExtractionTimeout(
+        "Extraction step exceeded its "
+        "time budget."
+    )
+
+
+# Hard wall-clock ceiling per source, in seconds.
+# This protects the whole job from a single source
+# hanging (e.g. a slow/blocked network response that
+# does not cleanly raise a request-level timeout) by
+# forcing a hard interrupt after this many seconds,
+# regardless of what the source's code is doing.
+SOURCE_TIME_BUDGET_SECONDS = {
+    "dev.to": 600,
+    "Pluralsight": 1500,
+    "freeCodeCamp": 900,
+    "Medium": 600,
+    "GeeksforGeeks": 300,
+}
+
+
 def run_extraction(
     refresh=False,
+    sources=None,
 ):
     """
-    Ensure raw data exists for all five sources.
+    Ensure raw data exists for the given sources
+    (all five by default).
 
     refresh=False:
         Reuse an existing source file when available.
 
     refresh=True:
-        Force all five sources to be collected again.
+        Force the selected sources to be collected again.
+
+    sources:
+        Optional list of source names to run (subset of
+        SUPPORTED_SOURCES). Defaults to all five when not
+        given, so this same function powers both the real
+        production run and a manual single-source test run.
+
+    Each source runs under its own hard time budget
+    (SOURCE_TIME_BUDGET_SECONDS) and its own
+    try/except, so a single source hanging or failing
+    cannot take down the other four.
     """
 
     outputs = {}
 
+    sources_to_run = (
+        sources
+        if sources
+        else SUPPORTED_SOURCES
+    )
+
     for source in (
-        SUPPORTED_SOURCES
+        sources_to_run
     ):
 
         print(
@@ -1911,10 +2214,53 @@ def run_extraction(
             "=" * 60
         )
 
-        outputs[source] = (
-            EXTRACTORS[source](
-                refresh=refresh
+        budget_seconds = (
+            SOURCE_TIME_BUDGET_SECONDS.get(
+                source,
+                900,
             )
         )
+
+        previous_handler = (
+            signal.signal(
+                signal.SIGALRM,
+                _timeout_handler,
+            )
+        )
+
+        signal.alarm(budget_seconds)
+
+        try:
+
+            outputs[source] = (
+                EXTRACTORS[source](
+                    refresh=refresh
+                )
+            )
+
+        except Exception as error:
+
+            print(
+                f"\n{source} extraction "
+                f"FAILED or TIMED OUT "
+                f"after {budget_seconds}s: "
+                f"{error}"
+            )
+
+            print(
+                f"Continuing with the "
+                f"remaining sources."
+            )
+
+            outputs[source] = None
+
+        finally:
+
+            signal.alarm(0)
+
+            signal.signal(
+                signal.SIGALRM,
+                previous_handler,
+            )
 
     return outputs

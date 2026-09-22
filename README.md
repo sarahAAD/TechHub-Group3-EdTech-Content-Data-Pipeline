@@ -439,3 +439,28 @@ python -m pytest -v
 ```
 
 The test suite verifies the shared extraction utilities, cleaning logic, source normalization, schema validation, rejection handling, and transformations without requiring live web requests during unit testing.
+---
+
+## Azure Data Factory Orchestration
+
+Azure Data Factory (ADF) is used to orchestrate the EdTech Content Data Pipeline.
+
+The master pipeline EdTechMasterPipeline performs the following steps:
+
+1. Triggers the Azure Container Apps Job for data ingestion.
+2. Waits for the ingestion step to complete successfully.
+3. Triggers the Databricks processing job.
+4. Databricks performs profiling, cleaning, validation, and transformation.
+5. The processed data is stored in Azure Data Lake Storage Gen2.
+
+The pipeline is scheduled to run once daily using an ADF Schedule Trigger.
+
+### Azure Pipeline Flow
+
+Container Apps Job → ADLS Gen2 → Databricks → Processed Data
+
+### Orchestration and Monitoring
+
+Azure Data Factory is responsible for controlling the execution order of the pipeline, scheduling daily runs, and monitoring pipeline execution status.
+
+The EdTechMasterPipeline was successfully tested end-to-end, with both the Container Apps Job and Databricks processing completing successfully.
