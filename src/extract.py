@@ -511,6 +511,9 @@ def extract_devto(
                 "body_html"
             )
 
+        except ExtractionTimeout:
+            raise
+
         except Exception as error:
 
             print(
@@ -1164,6 +1167,9 @@ def extract_freecodecamp(
                         2000
                     )
 
+                except ExtractionTimeout:
+                    raise
+
                 except Exception:
                     break
 
@@ -1425,6 +1431,9 @@ def extract_freecodecamp(
                         f"{collected}/"
                         f"{FREECODECAMP_TARGET_ARTICLES_PER_TERM}"
                     )
+
+                except ExtractionTimeout:
+                    raise
 
                 except Exception as error:
 
