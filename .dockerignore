@@ -1,0 +1,15 @@
+.venv/
+.git/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+
+data/raw/
+data/interim/
+data/processed/
+
+test-results/
+playwright-report/
+
+.env
