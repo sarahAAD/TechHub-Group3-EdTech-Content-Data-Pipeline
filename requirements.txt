@@ -13,3 +13,4 @@ beautifulsoup4
 datasets
 kagglehub
 playwright
+azure-storage-blob
