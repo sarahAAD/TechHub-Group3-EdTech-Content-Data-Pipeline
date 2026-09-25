@@ -9,9 +9,9 @@ Collects data from:
 4. Medium          -> Hugging Face
 5. GeeksforGeeks   -> Kaggle
 
-By default, existing raw files are reused.
+By default, previously known URLs are skipped using persistent ADLS state.
 
-Use refresh=True to force a new extraction.
+Use refresh=True to ignore known-URL state for the selected extraction.
 """
 
 from __future__ import annotations
@@ -393,21 +393,6 @@ class DevToClient:
 def extract_devto(
     refresh=False,
 ):
-
-    existing = (
-        discover_source_files(
-            "dev.to"
-        )
-    )
-
-    if existing and not refresh:
-
-        print(
-            "dev.to raw file already exists. "
-            "Skipping extraction."
-        )
-
-        return existing[-1]
 
     client = DevToClient()
 
@@ -992,20 +977,6 @@ def extract_pluralsight(
 
         outputs.append(output)
 
-        if (
-            output.exists()
-            and not refresh
-        ):
-
-            print(
-                "Pluralsight "
-                f"{category_name} "
-                "already exists. "
-                "Skipping extraction."
-            )
-
-            continue
-
         article_urls = (
             discover_pluralsight_urls(
                 category_config["url"],
@@ -1108,22 +1079,6 @@ def extract_pluralsight(
 def extract_freecodecamp(
     refresh=False,
 ):
-
-    existing = (
-        discover_source_files(
-            "freeCodeCamp"
-        )
-    )
-
-    if existing and not refresh:
-
-        print(
-            "freeCodeCamp raw file "
-            "already exists. "
-            "Skipping extraction."
-        )
-
-        return existing[-1]
 
     try:
 
@@ -1597,18 +1552,6 @@ def extract_medium(
     refresh=False,
 ):
 
-    if (
-        MEDIUM_OUTPUT.exists()
-        and not refresh
-    ):
-
-        print(
-            "Medium raw file already "
-            "exists. Skipping extraction."
-        )
-
-        return MEDIUM_OUTPUT
-
     try:
 
         from datasets import (
@@ -1820,19 +1763,6 @@ def load_gfg_csv(
 def extract_geeksforgeeks(
     refresh=False,
 ):
-
-    if (
-        GFG_OUTPUT.exists()
-        and not refresh
-    ):
-
-        print(
-            "GeeksforGeeks raw file "
-            "already exists. "
-            "Skipping extraction."
-        )
-
-        return GFG_OUTPUT
 
     try:
 
@@ -2172,10 +2102,10 @@ def run_extraction(
     (all five by default).
 
     refresh=False:
-        Reuse an existing source file when available.
+        Skip URLs already recorded in persistent ADLS known-URL state.
 
     refresh=True:
-        Force the selected sources to be collected again.
+        Ignore known-URL state and collect the selected sources again.
 
     sources:
         Optional list of source names to run (subset of

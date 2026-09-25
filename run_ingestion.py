@@ -94,7 +94,7 @@ def main():
     outputs = run_extraction(refresh=refresh, sources=sources_to_run)
 
     print("\n=== Step 2: Upload raw files to ADLS (مقسّمة بـ batch_id) ===")
-    batch_id = upload_raw_to_adls()
+    batch_id = upload_raw_to_adls(outputs=outputs)
 
     print_summary(sources_to_run, outputs, batch_id)
 

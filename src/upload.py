@@ -142,7 +142,7 @@ def save_known_urls_to_adls(source, url_signature_map):
         )
 
 
-def upload_raw_to_adls(batch_id=None):
+def upload_raw_to_adls(batch_id=None, outputs=None):
     """
     يرفع ملفات data/raw لكل مصدر إلى ADLS تحت:
     <container>/raw/batch_id=<batch_id>/<اسم_المصدر>/<اسم_الملف>
@@ -172,23 +172,93 @@ def upload_raw_to_adls(batch_id=None):
 
     total_uploaded = 0
 
-    for source, patterns in RAW_PATTERNS.items():
-        folder_name = SOURCE_FOLDER_MAP.get(source, source.lower())
+    def has_records(local_file):
+        # Return False for an empty JSON list or a header-only CSV.
+        local_file = Path(local_file)
 
-        matched_files = []
-        for pattern in patterns:
-            matched_files.extend(Path(RAW_DIR).glob(pattern))
+        try:
+            if local_file.suffix.lower() == ".json":
+                with local_file.open("r", encoding="utf-8") as file:
+                    data = json.load(file)
+                return bool(data)
 
-        if not matched_files:
-            print(f"[{source}] ما فيه ملفات جاهزة للرفع (لسا ما انسحبت).")
+            if local_file.suffix.lower() == ".csv":
+                with local_file.open("r", encoding="utf-8-sig") as file:
+                    return sum(1 for _ in file) > 1
+
+            return local_file.stat().st_size > 0
+
+        except Exception as error:
+            print(
+                f"[upload] Could not inspect {local_file.name}: {error}. "
+                "Uploading it as a fallback."
+            )
+            return True
+
+    # Upload only files produced by THIS extraction run.
+    # This prevents stale raw files baked into the Docker image from
+    # being copied into every new Bronze batch.
+    if outputs is not None:
+        files_by_source = {}
+
+        for source, result in outputs.items():
+            if result is None:
+                continue
+
+            candidates = (
+                result
+                if isinstance(result, (list, tuple))
+                else [result]
+            )
+
+            files_by_source[source] = [
+                Path(path)
+                for path in candidates
+                if path and Path(path).exists()
+            ]
+
+    else:
+        # Backward-compatible fallback for manual/legacy calls.
+        files_by_source = {}
+
+        for source, patterns in RAW_PATTERNS.items():
+            matched_files = []
+
+            for pattern in patterns:
+                matched_files.extend(
+                    Path(RAW_DIR).glob(pattern)
+                )
+
+            files_by_source[source] = matched_files
+
+    for source, matched_files in files_by_source.items():
+        folder_name = SOURCE_FOLDER_MAP.get(
+            source,
+            source.lower(),
+        )
+
+        nonempty_files = [
+            local_file
+            for local_file in matched_files
+            if has_records(local_file)
+        ]
+
+        if not nonempty_files:
+            print(
+                f"[{source}] No new/changed records to upload "
+                f"for batch_id={batch_id}."
+            )
             continue
 
-        for local_file in matched_files:
+        for local_file in nonempty_files:
             blob_path = (
                 f"raw/batch_id={batch_id}/{folder_name}/{local_file.name}"
             )
 
-            print(f"Uploading {local_file.name} -> {CONTAINER_NAME}/{blob_path}")
+            print(
+                f"Uploading {local_file.name} -> "
+                f"{CONTAINER_NAME}/{blob_path}"
+            )
 
             with open(local_file, "rb") as data:
                 container_client.upload_blob(
