@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TechHub</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="brand"><span class="mark">T</span>TechHub</div>
+    <nav id="nav">
+      <button data-view="browse" aria-current="page">Browse</button>
+      <button data-view="categories">Categories</button>
+      <button data-view="top">Newest</button>
+      <button data-view="saved">Saved</button>
+    </nav>
+  </div>
+</header>
+
+<div class="banner">
+  <div class="wrap"><span>✓</span><span><strong>Pipeline preview.</strong> Showing real records from the current Gold dataset through the TechHub API.</span></div>
+</div>
+
+<div class="hero">
+  <div class="wrap">
+    <h1>Discover AI, data &amp; cloud articles</h1>
+    <p>Curated educational content collected from dev.to, Medium, freeCodeCamp, Pluralsight and GeeksforGeeks</p>
+    <div class="searchbar">
+      <input id="searchInput" type="text" placeholder="e.g. introduction to cloud computing" aria-label="Search articles">
+      <button id="searchBtn" type="button">Search</button>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+</div>
+
+<main>
+  <div class="wrap">
+    <div class="section-head">
+      <h2 id="sectionTitle">Loading Gold articles…</h2>
+      <button class="link-btn" id="viewAllBtn" type="button">View all</button>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="emptyState" hidden>No articles match that search yet — try a different keyword or clear the search.</div>
+
+    <div class="info-box" id="infoBox">
+      <div class="i">i</div>
+      <div><strong>Current prototype:</strong> articles come from the Gold dataset produced by the pipeline. Category views and search use the real processed fields; the Newest view sorts records with available publication dates first.</div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>TechHub · EdTech content discovery (TechHub-Group3 project)</span>
+    <span>Sources: dev.to · Medium · freeCodeCamp · Pluralsight · GeeksforGeeks</span>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

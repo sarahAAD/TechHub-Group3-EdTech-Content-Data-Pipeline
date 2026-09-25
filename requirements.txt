@@ -14,3 +14,7 @@ datasets
 kagglehub
 playwright
 azure-storage-blob
+
+fastapi
+uvicorn
+databricks-sql-connector
