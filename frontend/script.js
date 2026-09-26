@@ -1,5 +1,5 @@
 (function(){
-  var API_URL = "http://127.0.0.1:8000/articles";
+  var API_URL = "https://techhub-api.bravewater-78d0955a.uaenorth.azurecontainerapps.io/articles";
   var PAGE_SIZE = 20;
   var CATEGORIES = [
     {key:"AI", label:"AI", tag:"AI"},
