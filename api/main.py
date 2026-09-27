@@ -64,54 +64,132 @@ def root():
 
 
 # ============================================================
-# Paginated article list
+# Paginated article list (with server-side search / filters)
 # ============================================================
+
+LIST_COLUMNS = """
+    article_id,
+    source,
+    category,
+    title,
+    author,
+    publication_date,
+    description,
+    url,
+    tags,
+    word_count,
+    publish_year,
+    is_long_form
+"""
+
+SEARCH_TEXT = """
+    lower(concat_ws(' ',
+        coalesce(title, ''),
+        coalesce(CAST(author AS STRING), ''),
+        coalesce(description, ''),
+        coalesce(CAST(tags AS STRING), ''),
+        coalesce(source, ''),
+        coalesce(category, '')
+    ))
+"""
+
+
+def build_filters(q, category, source):
+    """Return (WHERE clause, params) applied to the WHOLE Gold table."""
+    conditions = []
+    params = []
+
+    if category:
+        conditions.append("lower(trim(category)) = ?")
+        params.append(category.strip().lower())
+
+    if source:
+        conditions.append("lower(trim(source)) = ?")
+        params.append(source.strip().lower())
+
+    if q:
+        # Every word must appear somewhere in the searchable fields
+        for word in q.lower().split()[:10]:
+            conditions.append(f"instr({SEARCH_TEXT}, ?) > 0")
+            params.append(word)
+
+    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+    return where, params
+
 
 @app.get("/articles")
 def get_articles(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
+    q: str | None = Query(default=None, max_length=200),
+    category: str | None = Query(default=None, max_length=50),
+    source: str | None = Query(default=None, max_length=50),
+    sort: str = Query(default="mixed", pattern="^(mixed|newest)$"),
 ):
+    """
+    sort=mixed  -> round-robin across sources (newest of each source first),
+                   so one source (e.g. today's dev.to pull) can't fill a page.
+    sort=newest -> strictly by publication date.
+    """
     try:
         offset = (page - 1) * limit
+        where, params = build_filters(q, category, source)
+
+        if sort == "newest":
+            order_by = "publication_date DESC NULLS LAST, title ASC"
+        else:
+            order_by = (
+                "source_rank ASC, publication_date DESC NULLS LAST, "
+                "source ASC, title ASC"
+            )
 
         with get_connection() as connection:
             with connection.cursor() as cursor:
 
-                # Get total number of articles
+                # Total matching articles (whole table, not one page)
                 cursor.execute(
                     f"""
                     SELECT COUNT(*)
                     FROM delta.`{GOLD_PATH}`
-                    """
+                    {where}
+                    """,
+                    params,
                 )
 
                 total = cursor.fetchone()[0]
 
-                # Get only the requested page.
-                # Full article content is intentionally excluded.
+                # Requested page. Full article content is intentionally excluded.
                 cursor.execute(
                     f"""
-                    SELECT
-                        sha2(url, 256) AS article_id,
-                        source,
-                        category,
-                        title,
-                        author,
-                        publication_date,
-                        description,
-                        url,
-                        tags,
-                        word_count,
-                        publish_year,
-                        is_long_form
-                    FROM delta.`{GOLD_PATH}`
-                    ORDER BY
-                        publication_date DESC NULLS LAST,
-                        title ASC
+                    WITH filtered AS (
+                        SELECT
+                            sha2(url, 256) AS article_id,
+                            source,
+                            category,
+                            title,
+                            author,
+                            publication_date,
+                            description,
+                            url,
+                            tags,
+                            word_count,
+                            publish_year,
+                            is_long_form,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY lower(trim(source))
+                                ORDER BY publication_date DESC NULLS LAST,
+                                         title ASC
+                            ) AS source_rank
+                        FROM delta.`{GOLD_PATH}`
+                        {where}
+                    )
+                    SELECT {LIST_COLUMNS}
+                    FROM filtered
+                    ORDER BY {order_by}
                     LIMIT {limit}
                     OFFSET {offset}
-                    """
+                    """,
+                    params,
                 )
 
                 articles = rows_to_dicts(
@@ -123,7 +201,11 @@ def get_articles(
             "page": page,
             "limit": limit,
             "total": total,
-            "total_pages": math.ceil(total / limit),
+            "total_pages": max(1, math.ceil(total / limit)),
+            "query": q,
+            "category": category,
+            "source": source,
+            "sort": sort,
             "articles": articles,
         }
 
