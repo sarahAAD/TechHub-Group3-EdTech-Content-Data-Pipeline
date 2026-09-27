@@ -74,5 +74,10 @@
   var loadSeq=0;
   async function loadPage(page){var seq=++loadSeq;state.loading=true;state.error="";state.page=page;render();try{var r=await fetch(API_URL+"?"+listParams(page));if(!r.ok){var detail="";try{detail=(await r.json()).detail||"";}catch(_){}throw new Error("HTTP "+r.status+(detail?" — "+detail:""));}var data=await r.json();if(seq!==loadSeq)return;if(!data||!Array.isArray(data.articles))throw new Error("Unexpected API response");ARTICLES=data.articles.map(normalizeArticle);state.page=data.page||page;state.total=Number(data.total||0);state.totalPages=Number(data.total_pages||1);state.loading=false;window.scrollTo({top:0,behavior:"smooth"});}catch(e){state.loading=false;state.error="Could not load articles from the TechHub API ("+(e&&e.message?e.message:e)+").";console.error(e);}render();}
 
+  // Light / dark toggle
+  var themeBtn=document.getElementById("themeBtn");
+  function syncThemeBtn(){var dark=document.documentElement.getAttribute("data-theme")==="dark";themeBtn.textContent=dark?"☀️":"🌙";var l=dark?"Switch to light mode":"Switch to dark mode";themeBtn.setAttribute("aria-label",l);themeBtn.title=l;}
+  if(themeBtn){syncThemeBtn();themeBtn.addEventListener("click",function(){var next=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",next);try{localStorage.setItem("techhub_theme",next);}catch(e){}syncThemeBtn();});}
+
   render();loadPage(1);
 })();
