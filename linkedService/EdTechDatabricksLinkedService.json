@@ -1,0 +1,12 @@
+{
+	"name": "EdTechDatabricksLinkedService",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureDatabricks",
+		"typeProperties": {
+			"domain": "https://adb-7405619379283983.3.azuredatabricks.net",
+			"encryptedCredential": "ew0KICAiVmVyc2lvbiI6ICIyMDE3LTExLTMwIiwNCiAgIlByb3RlY3Rpb25Nb2RlIjogIktleSIsDQogICJTZWNyZXRDb250ZW50VHlwZSI6ICJQbGFpbnRleHQiLA0KICAiQ3JlZGVudGlhbElkIjogIkRBVEFGQUNUT1JZQDM0QzRFRkIwLTlFMzgtNDlDNS04NEY2LTAyMThFMTQzQThCM183ZDU5NzdmMS0wYjcxLTQ4ZjMtYTIzMi0yZjI5ZWE1NTdmYjYiDQp9"
+		}
+	}
+}

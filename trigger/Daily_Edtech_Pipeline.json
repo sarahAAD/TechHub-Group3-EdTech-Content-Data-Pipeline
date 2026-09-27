@@ -1,0 +1,24 @@
+{
+	"name": "Daily_Edtech_Pipeline",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "EdTechMasterPipeline",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2026-09-21T08:17:00",
+				"timeZone": "Arab Standard Time"
+			}
+		}
+	}
+}

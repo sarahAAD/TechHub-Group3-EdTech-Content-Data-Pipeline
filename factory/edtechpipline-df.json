@@ -1,0 +1,21 @@
+{
+	"name": "edtechpipline-df",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Disabled",
+			"editable": true
+		}
+	},
+	"location": "uaenorth",
+	"identity": {
+		"type": "SystemAssigned,UserAssigned",
+		"principalId": "53ba27d3-2392-45c9-892c-908e57b3cdc7",
+		"tenantId": "d2cfba7f-f039-4f99-9813-d34d7970cb9c",
+		"userAssignedIdentities": {
+			"/subscriptions/b91c3d60-4c41-4829-9cd9-1f3e674f05de/resourcegroups/EdTechPipline-RG/providers/Microsoft.ManagedIdentity/userAssignedIdentities/edtechpipeline-adf-mi": {
+				"clientId": "a9ce51eb-2152-4283-8ff8-1926b1c3acea",
+				"principalId": "0a7a15f1-56ea-4553-a6ca-a6f03e99b170"
+			}
+		}
+	}
+}

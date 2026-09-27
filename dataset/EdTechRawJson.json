@@ -1,0 +1,20 @@
+{
+	"name": "EdTechRawJson",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "EdTechStorageLinkedService",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"folderPath": "raw",
+				"container": "edtech"
+			}
+		},
+		"schema": {}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

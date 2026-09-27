@@ -1,0 +1,25 @@
+{
+	"name": "EdTechRawCSV",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "EdTechStorageLinkedService",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": "freecodecamp_2026-09-19.csv",
+				"folderPath": "raw/freecodecamp",
+				"container": "edtech"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

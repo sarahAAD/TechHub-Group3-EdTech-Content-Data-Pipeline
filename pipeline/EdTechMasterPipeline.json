@@ -1,0 +1,220 @@
+{
+	"name": "EdTechMasterPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "Start_ContainerApps_Job",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set_batch_id",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"url": "https://management.azure.com/subscriptions/b91c3d60-4c41-4829-9cd9-1f3e674f05de/resourceGroups/EdTechPipline-RG/providers/Microsoft.App/jobs/techhub-ingestion-job/start?api-version=2026-01-01",
+					"body": {
+						"value": "@json(concat(\n'{\"containers\":[{\"name\":\"techhub-ingestion-job\",\"image\":\"edtechplineacr.azurecr.io/techhub-ingestion:v9\",\"env\":[',\n'{\"name\":\"AZURE_STORAGE_CONNECTION_STRING\",\"secretRef\":\"storage-connection-string\"},',\n'{\"name\":\"KAGGLE_API_TOKEN\",\"secretRef\":\"kaggle-api-token\"},',\n'{\"name\":\"BATCH_ID\",\"value\":\"',\nvariables('batch_id'),\n'\"}',\n'],\"resources\":{\"cpu\":2,\"memory\":\"4Gi\"}}]}'\n))",
+						"type": "Expression"
+					},
+					"authentication": {
+						"resource": "https://management.azure.com/",
+						"credential": {
+							"referenceName": "Start_ContainerApps_Job",
+							"type": "CredentialReference"
+						},
+						"type": "UserAssignedManagedIdentity"
+					}
+				}
+			},
+			{
+				"name": "Set_batch_id",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "batch_id",
+					"value": {
+						"value": "@formatDateTime(utcNow(),'yyyyMMdd_HHmmss')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Wait_For_Ingestion_Completion",
+				"type": "Until",
+				"dependsOn": [
+					{
+						"activity": "Set_Execution_Name",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@or(\n    equals(activity('Check_Ingestion_Status').output.properties.status, 'Succeeded'),\n    equals(activity('Check_Ingestion_Status').output.properties.status, 'Failed')\n)",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Check_Ingestion_Status",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"method": "GET",
+								"url": {
+									"value": "@concat(\n  'https://management.azure.com/subscriptions/b91c3d60-4c41-4829-9cd9-1f3e674f05de/resourceGroups/EdTechPipline-RG/providers/Microsoft.App/jobs/techhub-ingestion-job/executions/',\n  variables('execution_name'),\n  '?api-version=2026-01-01'\n)",
+									"type": "Expression"
+								},
+								"authentication": {
+									"resource": "https://management.azure.com/",
+									"credential": {
+										"referenceName": "Start_ContainerApps_Job",
+										"type": "CredentialReference"
+									},
+									"type": "UserAssignedManagedIdentity"
+								}
+							}
+						},
+						{
+							"name": "Wait_Before_Next_Check",
+							"type": "Wait",
+							"dependsOn": [
+								{
+									"activity": "Check_Ingestion_Status",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 30
+							}
+						}
+					],
+					"timeout": "0.12:00:00"
+				}
+			},
+			{
+				"name": "Set_Execution_Name",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Start_ContainerApps_Job",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "execution_name",
+					"value": {
+						"value": "@activity('Start_ContainerApps_Job').output.name",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Check_Ingestion_Result",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Wait_For_Ingestion_Completion",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(\n    activity('Check_Ingestion_Status').output.properties.status,\n    'Succeeded'\n)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Fail_Ingestion",
+							"type": "Fail",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"message": "Container Apps ingestion job failed.",
+								"errorCode": "INGESTION_FAILED"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Run_Databricks_Processing_true",
+							"type": "DatabricksJob",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"jobId": "569165111690401",
+								"jobParameters": {
+									"batch_id": {
+										"value": "@variables('batch_id')",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "EdTechDatabricksLinkedService",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			}
+		],
+		"variables": {
+			"batch_id": {
+				"type": "String"
+			},
+			"execution_name": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-09-25T22:10:30Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}
